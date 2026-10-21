@@ -74,16 +74,37 @@ jobs:
           -p:EnableCodeSigning=false -p:RuntimeIdentifier=iossimulator-arm64
           --configuration Release
 
+  # Static analysis. Same workflow also runs weekly on a schedule.
+  codeql:
+    uses: ./.github/workflows/codeql.yml
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+
+  # Pull requests only: blocks new dependencies with known high-severity advisories.
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: high
+
   # The only check branch protection requires. Fails if any needed job failed, was cancelled,
   # or is not listed here, so a new job cannot silently escape the gate.
   ci-gate:
     if: always()
-    needs: [test-android, ios-simulator]
+    needs: [test-android, ios-simulator, codeql, dependency-review]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      REQUIRED: test-android ios-simulator
-      OPTIONAL: ""
+      REQUIRED: test-android ios-simulator codeql
+      OPTIONAL: dependency-review
     steps:
       - uses: actions/checkout@v4
       - name: Evaluate needs
