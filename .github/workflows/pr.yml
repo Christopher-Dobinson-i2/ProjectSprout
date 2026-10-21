@@ -48,7 +48,7 @@ jobs:
 
   # macOS: only what needs a Mac. Bills at about 10x Linux, so it builds the iOS simulator target and nothing else.
   ios-simulator:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -57,10 +57,13 @@ jobs:
           global-json-file: global.json
           cache: true
           cache-dependency-path: "**/*.csproj"
-      - name: Record Xcode version
+      - name: Select pinned Xcode
+        env:
+          XCODE_VERSION: "26.6"
         run: |
+          ls -d /Applications/Xcode*.app
+          sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
           xcodebuild -version
-          echo "Pinned local Xcode is recorded in docs/toolchain.md"
       - name: Install MAUI iOS workload
         run: dotnet workload install maui-ios --version "$WORKLOAD_VERSION"
       - name: Build iOS simulator
