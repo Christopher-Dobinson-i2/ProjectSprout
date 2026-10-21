@@ -1,0 +1,58 @@
+name: Mac demo build
+
+# Builds a Mac Catalyst .app from main so the product can be demoed on a Mac without Xcode.
+on:
+  push:
+    branches: [main]
+    paths: ["src/**", "global.json", ".github/workflows/demo.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: demo-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  WORKLOAD_VERSION: 10.0.302
+
+jobs:
+  mac-demo:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: "**/*.csproj"
+      - name: Select pinned Xcode
+        env:
+          XCODE_VERSION: "26.6"
+        run: |
+          sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
+          xcodebuild -version
+      - name: Install MAUI Mac Catalyst workload
+        run: dotnet workload install maui-maccatalyst --version "$WORKLOAD_VERSION"
+      - name: Build
+        run: >
+          dotnet build src/Sprout.App -p:SproutTargets=net10.0-maccatalyst
+          -c Release -p:EnableCodeSigning=false -p:RuntimeIdentifier=maccatalyst-arm64
+      - name: Zip app
+        run: |
+          app=$(find src/Sprout.App/bin/Release -name "Sprout.app" -maxdepth 4 | head -1)
+          test -d "$app" || { echo "Sprout.app not found"; exit 1; }
+          ditto -c -k --sequesterRsrc --keepParent "$app" Sprout-mac-demo.zip
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Sprout-mac-demo
+          path: Sprout-mac-demo.zip
+          retention-days: 14
