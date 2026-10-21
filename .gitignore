@@ -1,0 +1,33 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+TestResults/
+*.binlog
+# MAUI / Xcode
+xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+*.ipa
+*.dSYM.zip
+# Android
+*.apk
+*.aab
+*.keystore
+*.jks
+local.properties
+.gradle/
+# Secrets and signing material
+*.p12
+*.p8
+*.mobileprovision
+*.env
+.env.*
+google-play*.json
+# OS / editor
+.DS_Store
+.vscode/
+*.log

@@ -1,0 +1,9 @@
+# Pipeline, signing and release files need the owner's review.
+/.github/        @Christopher-Dobinson-i2
+/CODEOWNERS      @Christopher-Dobinson-i2
+/global.json     @Christopher-Dobinson-i2
+/fastlane/       @Christopher-Dobinson-i2
+*.entitlements   @Christopher-Dobinson-i2
+Info.plist       @Christopher-Dobinson-i2
+AndroidManifest.xml @Christopher-Dobinson-i2
+*.csproj         @Christopher-Dobinson-i2
