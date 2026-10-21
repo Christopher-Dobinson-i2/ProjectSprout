@@ -7,3 +7,4 @@
 Info.plist       @Christopher-Dobinson-i2
 AndroidManifest.xml @Christopher-Dobinson-i2
 *.csproj         @Christopher-Dobinson-i2
+/scripts/        @Christopher-Dobinson-i2
