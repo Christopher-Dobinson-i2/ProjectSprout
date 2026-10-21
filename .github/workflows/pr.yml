@@ -1,0 +1,73 @@
+name: PR
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Cancel superseded PR runs, never runs on main.
+concurrency:
+  group: pr-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  WORKLOAD_VERSION: 10.0.302
+
+jobs:
+  # Linux: unit tests and the Android build. Cheap, so it runs on every PR.
+  test-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: "**/*.csproj"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install MAUI Android workload
+        run: dotnet workload install maui-android --version "$WORKLOAD_VERSION"
+      - name: Test
+        run: dotnet test tests/Sprout.Tests --configuration Release
+      - name: Build Android
+        run: dotnet build src/Sprout.App -f net10.0-android --configuration Release
+
+  # macOS: only what needs a Mac. Bills at about 10x Linux, so it builds the iOS simulator target and nothing else.
+  ios-simulator:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: "**/*.csproj"
+      - name: Select pinned Xcode
+        env:
+          XCODE_VERSION: "26.6"
+        run: |
+          ls -d /Applications/Xcode*.app
+          sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
+          xcodebuild -version
+      - name: Install MAUI iOS workload
+        run: dotnet workload install maui-ios --version "$WORKLOAD_VERSION"
+      - name: Build iOS simulator
+        run: >
+          dotnet build src/Sprout.App -p:SproutTargets=net10.0-ios
+          -p:EnableCodeSigning=false -p:RuntimeIdentifier=iossimulator-arm64
+          --configuration Release
