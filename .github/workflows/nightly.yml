@@ -63,7 +63,7 @@ jobs:
         run: dotnet test tests/Sprout.Tests --configuration Release
       - name: Build Release
         run: |
-          args=(-p:SproutTargets=${{ matrix.target }} -c Release)
+          args=(-p:SproutTargets=${{ matrix.target }} -c Release -p:SproutEnv=dev)
           if [ -n "${{ matrix.rid }}" ]; then args+=(-p:RuntimeIdentifier=${{ matrix.rid }}); fi
           if [ "${{ matrix.target }}" != "net10.0-android" ]; then args+=(-p:EnableCodeSigning=false); fi
           dotnet build src/Sprout.App "${args[@]}"

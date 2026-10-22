@@ -48,7 +48,7 @@ jobs:
       - name: Test
         run: dotnet test tests/Sprout.Tests --configuration Release
       - name: Build Android
-        run: dotnet build src/Sprout.App -f net10.0-android --configuration Release
+        run: dotnet build src/Sprout.App -f net10.0-android --configuration Release -p:SproutEnv=dev
 
   # macOS: only what needs a Mac. Bills at about 10x Linux, so it builds the iOS simulator target and nothing else.
   ios-simulator:
@@ -74,7 +74,7 @@ jobs:
         run: >
           dotnet build src/Sprout.App -p:SproutTargets=net10.0-ios
           -p:EnableCodeSigning=false -p:RuntimeIdentifier=iossimulator-arm64
-          --configuration Release
+          -p:SproutEnv=dev --configuration Release
 
   # Static analysis. Same workflow also runs weekly on a schedule.
   codeql:

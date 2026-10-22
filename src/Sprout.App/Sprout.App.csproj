@@ -28,11 +28,7 @@
 		       <MauiXaml Update="MyPage.xaml" Inflator="Runtime" /> (force runtime inflation) -->
 		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 
-		<!-- Display name -->
-		<ApplicationTitle>Sprout</ApplicationTitle>
-
-		<!-- App Identifier -->
-		<ApplicationId>com.example.sprout</ApplicationId>
+		<!-- Identity comes from the environment: see the SproutEnv block below and docs/environments.md. -->
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
@@ -73,6 +69,39 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\Sprout.Core\Sprout.Core.csproj" />
+	</ItemGroup>
+
+	<!-- Environments as code. dev is the default for local work; Release builds must name an environment
+	     (-p:SproutEnv=staging|production) so a shipped build can never silently be a dev build.
+	     SproutBaseId is the placeholder bundle ID until issue #2 settles the real one. -->
+	<PropertyGroup>
+		<SproutEnvExplicit Condition="'$(SproutEnv)' != ''">true</SproutEnvExplicit>
+		<SproutEnv Condition="'$(SproutEnv)' == ''">dev</SproutEnv>
+		<SproutBaseId>com.example.sprout</SproutBaseId>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(SproutEnv)' == 'dev'">
+		<ApplicationId>$(SproutBaseId).dev</ApplicationId>
+		<ApplicationTitle>Sprout Dev</ApplicationTitle>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(SproutEnv)' == 'staging'">
+		<ApplicationId>$(SproutBaseId).staging</ApplicationId>
+		<ApplicationTitle>Sprout Staging</ApplicationTitle>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(SproutEnv)' == 'production'">
+		<ApplicationId>$(SproutBaseId)</ApplicationId>
+		<ApplicationTitle>Sprout</ApplicationTitle>
+	</PropertyGroup>
+	<Target Name="CheckSproutEnv" BeforeTargets="PrepareForBuild">
+		<Error Condition="'$(SproutEnv)' != 'dev' And '$(SproutEnv)' != 'staging' And '$(SproutEnv)' != 'production'"
+		       Text="SproutEnv must be dev, staging or production (got '$(SproutEnv)')." />
+		<Error Condition="'$(Configuration)' == 'Release' And '$(SproutEnvExplicit)' != 'true'"
+		       Text="Release builds must set -p:SproutEnv=dev|staging|production explicitly." />
+	</Target>
+	<ItemGroup>
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>SproutEnv</_Parameter1>
+			<_Parameter2>$(SproutEnv)</_Parameter2>
+		</AssemblyAttribute>
 	</ItemGroup>
 
 </Project>
