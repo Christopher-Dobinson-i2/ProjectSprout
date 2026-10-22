@@ -1,0 +1,107 @@
+name: Nightly
+
+# Full build matrix once a night, plus on demand. On failure it opens (or updates) one
+# issue labelled nightly-failure. Unit tests run in pr.yml; there are no UI/emulator tests yet.
+on:
+  schedule:
+    - cron: "23 2 * * *" # 02:23 UTC
+  workflow_dispatch:
+    inputs:
+      force_fail:
+        description: "Fail on purpose to prove the issue is filed"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  WORKLOAD_VERSION: 10.0.302
+
+jobs:
+  build:
+    name: build ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, target: net10.0-android,     workload: maui-android,     rid: "" }
+          - { os: macos-26,      target: net10.0-ios,         workload: maui-ios,         rid: iossimulator-arm64 }
+          - { os: macos-26,      target: net10.0-maccatalyst, workload: maui-maccatalyst, rid: maccatalyst-arm64 }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: "**/*.csproj"
+      - if: runner.os == 'macOS'
+        name: Select pinned Xcode
+        env:
+          XCODE_VERSION: "26.6"
+        run: sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
+      - uses: actions/setup-java@v6
+        if: runner.os == 'Linux'
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install workload
+        run: dotnet workload install ${{ matrix.workload }} --version "$WORKLOAD_VERSION"
+      - name: Forced failure
+        if: inputs.force_fail
+        run: echo "force_fail requested" && exit 1
+      - name: Test (Linux only)
+        if: runner.os == 'Linux'
+        run: dotnet test tests/Sprout.Tests --configuration Release
+      - name: Build Release
+        run: |
+          args=(-p:SproutTargets=${{ matrix.target }} -c Release)
+          if [ -n "${{ matrix.rid }}" ]; then args+=(-p:RuntimeIdentifier=${{ matrix.rid }}); fi
+          if [ "${{ matrix.target }}" != "net10.0-android" ]; then args+=(-p:EnableCodeSigning=false); fi
+          dotnet build src/Sprout.App "${args[@]}"
+
+  # Always runs: records what the night cost, and files one issue if anything failed.
+  report:
+    if: always()
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Cost of this run
+        run: |
+          gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs" --jq '
+            [.jobs[] | select(.name|startswith("build")) | {n:.name, os:(.labels|join(",")), s:((.completed_at // .started_at)|fromdate - (.started_at|fromdate))}]' > jobs.json
+          {
+            echo "### Nightly cost"
+            echo "| job | runner | minutes |"; echo "|---|---|---|"
+            jq -r '.[] | "| \(.n) | \(.os) | \((.s/60*10|round)/10) |"' jobs.json
+            echo
+            echo "Billed-minute equivalents (macOS counts 10x): $(jq '[.[] | (.s/60) * (if (.os|test("macos")) then 10 else 1 end)] | add | . * 10 | round / 10' jobs.json)"
+            echo "Free on a public repo. Becomes real money if the repo goes private."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: File one issue on failure
+        if: needs.build.result != 'success'
+        run: |
+          existing=$(gh issue list --repo "${{ github.repository }}" --label nightly-failure --state open --json number --jq '.[0].number // empty')
+          body="Nightly build failed (result: ${{ needs.build.result }}). Run: $RUN_URL"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "${{ github.repository }}" --body "$body"
+          else
+            gh issue create --repo "${{ github.repository }}" --label nightly-failure \
+              --title "Nightly build failed $(date -u +%F)" --body "$body"
+          fi
