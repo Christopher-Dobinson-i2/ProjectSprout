@@ -43,6 +43,8 @@ jobs:
         run: dotnet workload install maui-android --version "$WORKLOAD_VERSION"
       - name: Test gate logic
         run: ./scripts/test-ci-gate.sh
+      - name: Test risk scorer
+        run: ./scripts/test-risk-score.sh
       - name: Test
         run: dotnet test tests/Sprout.Tests --configuration Release
       - name: Build Android

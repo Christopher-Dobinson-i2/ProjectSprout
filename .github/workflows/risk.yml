@@ -1,0 +1,60 @@
+name: Risk tier
+
+# Labels each PR risk:t0..risk:t3 from the paths it changes.
+# SECURITY: pull_request_target runs with write permissions, so this workflow must never check out,
+# build or run code from the PR. It checks out the BASE branch (the default for this event) to read the
+# scorer and rules, and it gets the PR's file list from the API. Filenames only ever travel through
+# stdin and a variable, never through ${{ }} in a script, so a crafted filename cannot inject commands.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: risk-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR: ${{ github.event.pull_request.number }}
+      REPO: ${{ github.repository }}
+    steps:
+      # No `ref:` here on purpose: for this event the default is the base branch, not the PR.
+      - uses: actions/checkout@v7
+      - name: Score
+        id: score
+        run: |
+          tier=T3
+          if gh api --paginate "repos/$REPO/pulls/$PR/files" \
+               --jq '.[] | .filename, (.previous_filename // empty)' > paths.txt; then
+            # The files API caps at 3000 files; a PR that large cannot be scored, so it is T3.
+            if [ "$(wc -l < paths.txt)" -lt 3000 ]; then
+              tier=$(./scripts/risk-score.sh < paths.txt)
+            fi
+          fi
+          case "$tier" in T0|T1|T2|T3) ;; *) tier=T3 ;; esac
+          echo "tier=$tier" >> "$GITHUB_OUTPUT"
+          echo "Risk tier: $tier" >> "$GITHUB_STEP_SUMMARY"
+      - name: Apply label
+        env:
+          TIER: ${{ steps.score.outputs.tier }}
+        run: |
+          label="risk:$(tr 'T' 't' <<<"$TIER")"
+          for l in risk:t0 risk:t1 risk:t2 risk:t3; do
+            gh label create "$l" --repo "$REPO" --color 0055ff --description "Risk tier from changed paths" 2>/dev/null || true
+          done
+          for l in risk:t0 risk:t1 risk:t2 risk:t3; do
+            [ "$l" = "$label" ] || gh pr edit "$PR" --repo "$REPO" --remove-label "$l" 2>/dev/null || true
+          done
+          gh pr edit "$PR" --repo "$REPO" --add-label "$label"

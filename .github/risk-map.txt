@@ -1,0 +1,25 @@
+# Path -> risk tier. First matching line wins; a PR takes the highest tier of any file it touches.
+# Patterns are bash globs; * also matches "/". Anything unmatched is T2 (round up).
+# T3: platform manifests, entitlements, signing, build settings, pipeline and gate files.
+T3 *.csproj
+T3 *.props
+T3 *.targets
+T3 Directory.*
+T3 global.json
+T3 *.entitlements
+T3 *Info.plist
+T3 *AndroidManifest.xml
+T3 .github/*
+T3 scripts/*
+T3 fastlane/*
+T3 *.keystore
+T3 *.jks
+T3 *.p12
+T3 *.p8
+T3 *.mobileprovision
+# T0: docs and comments only.
+T0 docs/*
+T0 *.md
+# T1: UI, styles, copy.
+T1 *.xaml
+T1 src/Sprout.App/Resources/*
