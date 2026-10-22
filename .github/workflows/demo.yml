@@ -48,8 +48,9 @@ jobs:
           -c Release -p:SproutEnv=staging -p:EnableCodeSigning=false -p:RuntimeIdentifier=maccatalyst-arm64
       - name: Zip app
         run: |
-          app=$(find src/Sprout.App/bin/Release -name "Sprout.app" -maxdepth 4 | head -1)
-          test -d "$app" || { echo "Sprout.app not found"; exit 1; }
+          # The app is named after its environment (e.g. "Sprout Staging.app").
+          app=$(find src/Sprout.App/bin/Release -name "*.app" -maxdepth 4 | head -1)
+          test -d "$app" || { echo "no .app found"; exit 1; }
           ditto -c -k --sequesterRsrc --keepParent "$app" Sprout-mac-demo.zip
       - uses: actions/upload-artifact@v7
         with:

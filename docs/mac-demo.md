@@ -1,14 +1,14 @@
 # Mac demo build
 
-Every merge to `main` that touches `src/` builds `Sprout.app` for Mac Catalyst and attaches it to the run as
+Every merge to `main` that touches `src/` builds the Mac Catalyst app (`Sprout Staging.app`, the staging environment) and attaches it to the run as
 the `Sprout-mac-demo` artifact (14 days). No Xcode needed to run it.
 
 ## Run it
 
 1. Open the latest "Mac demo build" run in the Actions tab and download `Sprout-mac-demo`.
-2. Unzip and double-click `Sprout.app`.
+2. Unzip and double-click `Sprout Staging.app`.
 3. First launch: the app is not notarised, so macOS blocks it. Right-click, Open, Open. Or run
-   `xattr -dr com.apple.quarantine Sprout.app`.
+   `xattr -dr com.apple.quarantine "Sprout Staging.app"`.
 
 The window is fixed at 393 x 852 (phone size) so a demo looks like a phone.
 
