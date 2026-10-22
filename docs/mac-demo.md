@@ -18,3 +18,4 @@ The window is fixed at 393 x 852 (phone size) so a demo looks like a phone.
 - **Outside the team:** needs a Developer ID Application certificate and notarisation, which needs the Apple
   Developer organisation account (issue #2). Until then, do not send the `.app` to people who cannot
   right-click Open. A TestFlight build (issue #9) is the better route for outside testers.
+
