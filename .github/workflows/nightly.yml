@@ -82,20 +82,8 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
-      - name: Cost of this run
-        run: |
-          gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs" --jq '
-            [.jobs[] | select(.name|startswith("build")) | {n:.name, os:(.labels|join(",")), s:((.completed_at // .started_at)|fromdate - (.started_at|fromdate))}]' > jobs.json
-          {
-            echo "### Nightly cost"
-            echo "| job | runner | minutes |"; echo "|---|---|---|"
-            jq -r '.[] | "| \(.n) | \(.os) | \((.s/60*10|round)/10) |"' jobs.json
-            echo
-            echo "Billed-minute equivalents (macOS counts 10x): $(jq '[.[] | (.s/60) * (if (.os|test("macos")) then 10 else 1 end)] | add | . * 10 | round / 10' jobs.json)"
-            echo "Free on a public repo. Becomes real money if the repo goes private."
-          } >> "$GITHUB_STEP_SUMMARY"
       - name: File one issue on failure
-        if: needs.build.result != 'success'
+        if: always() && needs.build.result != 'success'
         run: |
           existing=$(gh issue list --repo "${{ github.repository }}" --label nightly-failure --state open --json number --jq '.[0].number // empty')
           body="Nightly build failed (result: ${{ needs.build.result }}). Run: $RUN_URL"
@@ -105,3 +93,16 @@ jobs:
             gh issue create --repo "${{ github.repository }}" --label nightly-failure \
               --title "Nightly build failed $(date -u +%F)" --body "$body"
           fi
+      - name: Cost of this run
+        if: always()
+        run: |
+          gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs" --jq '
+            [.jobs[] | select(.name|startswith("build")) | {n:.name, os:(.labels|join(",")), s:(((.completed_at // .started_at)|fromdate) - (.started_at|fromdate))}]' > jobs.json
+          {
+            echo "### Nightly cost"
+            echo "| job | runner | minutes |"; echo "|---|---|---|"
+            jq -r '.[] | "| \(.n) | \(.os) | \((.s/60*10|round)/10) |"' jobs.json
+            echo
+            echo "Billed-minute equivalents (macOS counts 10x): $(jq '[.[] | (.s/60) * (if (.os|test("macos")) then 10 else 1 end)] | add | . * 10 | round / 10' jobs.json)"
+            echo "Free on a public repo. Becomes real money if the repo goes private."
+          } >> "$GITHUB_STEP_SUMMARY"
