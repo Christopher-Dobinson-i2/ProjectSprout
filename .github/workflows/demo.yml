@@ -45,7 +45,7 @@ jobs:
       - name: Build
         run: >
           dotnet build src/Sprout.App -p:SproutTargets=net10.0-maccatalyst
-          -c Release -p:EnableCodeSigning=false -p:RuntimeIdentifier=maccatalyst-arm64
+          -c Release -p:SproutEnv=staging -p:EnableCodeSigning=false -p:RuntimeIdentifier=maccatalyst-arm64
       - name: Zip app
         run: |
           app=$(find src/Sprout.App/bin/Release -name "Sprout.app" -maxdepth 4 | head -1)
