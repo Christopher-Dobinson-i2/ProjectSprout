@@ -1,5 +1,7 @@
 # ProjectSprout
 
+<!-- claude-code:ticket-prefix=SPRT -->
+
 New .NET MAUI app for iOS and Android (plus a Mac Catalyst build for demos). Evidence capture for learners and
 assessors, built to sit alongside OneFile's platform. This repo is separate from ProjectHelix
 (`~/Vanguard/ProjectHelix`): do not copy Helix's gate rules, epic branches or vendor-PR process here.

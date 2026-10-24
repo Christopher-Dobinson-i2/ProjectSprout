@@ -31,3 +31,6 @@ google-play*.json
 .DS_Store
 .vscode/
 *.log
+# Claude Code local state (cost-log.csv, local settings). A shared .claude/settings.json may be committed.
+.claude/*
+!.claude/settings.json
