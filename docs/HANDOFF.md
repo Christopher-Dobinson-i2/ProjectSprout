@@ -32,6 +32,9 @@ gh api repos/Christopher-Dobinson-i2/ProjectSprout/branches/main/protection --jq
 
 If `git push` asks for a password, run `gh auth setup-git` or re-run `gh auth login` choosing HTTPS.
 
+`gh` can still default to SSH (`gh auth status` shows "Git operations protocol: ssh"), which breaks `gh repo clone`
+and `gh pr checkout`. Fix it once with `gh config set git_protocol https`.
+
 ## 3. Jira connection
 
 - Site: `dobbo1988.atlassian.net` (cloud ID `87d8e7a8-d9e1-4ccb-8488-b77526933ade`). Project key: `SPRT`. Board: 233.
@@ -48,7 +51,7 @@ If `git push` asks for a password, run `gh auth setup-git` or re-run `gh auth lo
 Verify in the new session by asking: *"Search Jira project SPRT for epic SPRT-1 and list its child stories with
 priority and status."* Expect 17 stories, SPRT-2 to SPRT-18, all To Do, SPRT-2 `Highest`.
 
-Issue types in SPRT: Epic, Story, Task, Bug, Subtask. Statuses: To Do, In Progress, In Review, Done (no "Won't Do"; use
+Issue types in SPRT: Epic, Story, Task, Bug, Subtask. Statuses: To Do, In Progress, Done (no "In Review" transition, checked 2026-10-24; no "Won't Do"; use
 Done plus a `wont-do` label and a comment).
 
 ### Linking Jira to GitHub
