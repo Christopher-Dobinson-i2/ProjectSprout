@@ -66,7 +66,7 @@ Not automatic yet. Until someone installs **GitHub for Jira** (needs a Jira site
 
 | Area | State |
 |---|---|
-| Pipeline | PR checks (Android on Linux, iOS on macOS), `ci-gate`, branch protection, risk labels, CodeQL, dependency review, nightly build matrix, Mac demo build: all working. Environments dev/staging/production as code. |
+| Pipeline | PR checks (Android on Linux, iOS on macOS), `ci-gate`, branch protection, risk labels, CodeQL, dependency review, nightly build matrix, Mac demo build: all working. Environments dev/staging/production as code. Installers to download (14 days, from the run's Artifacts): Nightly gives an Android `.apk` (debug-signed, sideload) and an iOS simulator `.app` zip (Simulator only); Mac demo build gives the Mac `.app`. No store or real-iPhone builds until #7 to #9. |
 | CI/CD issues | Done: #1, #3, #4, #6, #14. Waiting on the owner: #2 (Apple/Google accounts), then #7, #8, #9. Partly open: #5, #10, #11, #12, #13. Epic: #15. |
 | Product backlog | Jira epic SPRT-1 with 17 stories. Nothing built yet. App is a skeleton ("Hello, Sprout!"). |
 | Repo | Public. Decision: private before real feature code lands. Needs Actions billing fixed and GitHub Pro first. |

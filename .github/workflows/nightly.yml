@@ -2,6 +2,8 @@ name: Nightly
 
 # Full build matrix once a night, plus on demand. On failure it opens (or updates) one
 # issue labelled nightly-failure. Unit tests run in pr.yml; there are no UI/emulator tests yet.
+# Keeps two unsigned-for-store builds for 14 days: an Android .apk (debug-key signed, sideloadable)
+# and an iOS simulator .app (ad-hoc signed; runs in Simulator only, not on a real iPhone).
 on:
   schedule:
     - cron: "23 2 * * *" # 02:23 UTC
@@ -65,8 +67,37 @@ jobs:
         run: |
           args=(-p:SproutTargets=${{ matrix.target }} -c Release -p:SproutEnv=dev)
           if [ -n "${{ matrix.rid }}" ]; then args+=(-p:RuntimeIdentifier=${{ matrix.rid }}); fi
-          if [ "${{ matrix.target }}" != "net10.0-android" ]; then args+=(-p:EnableCodeSigning=false); fi
+          # Android: Release defaults to .aab, which cannot be sideloaded, so ask for an .apk.
+          if [ "${{ matrix.target }}" = "net10.0-android" ]; then args+=(-p:AndroidPackageFormat=apk); fi
+          # iOS simulator keeps default ad-hoc signing (no certificate needed); without it the app
+          # is killed at launch with "Code Signature Invalid".
+          if [ "${{ matrix.target }}" = "net10.0-maccatalyst" ]; then args+=(-p:EnableCodeSigning=false); fi
           dotnet build src/Sprout.App "${args[@]}"
+      - name: Package installer
+        id: package
+        if: matrix.target != 'net10.0-maccatalyst' # the Mac demo is built by demo.yml
+        run: |
+          out="src/Sprout.App/bin/Release/${{ matrix.target }}"
+          stamp="dev-$(date -u +%Y%m%d)-run${{ github.run_number }}"
+          if [ "${{ matrix.target }}" = "net10.0-android" ]; then
+            apk=$(find "$out" -maxdepth 1 -name "*-Signed.apk" | head -1)
+            test -f "$apk" || { echo "no signed .apk found"; exit 1; }
+            file="Sprout-android-$stamp.apk"
+            cp "$apk" "$file"
+          else
+            app=$(find "$out" -maxdepth 3 -name "*.app" | head -1)
+            test -d "$app" || { echo "no .app found"; exit 1; }
+            file="Sprout-ios-simulator-$stamp.zip"
+            ditto -c -k --sequesterRsrc --keepParent "$app" "$file"
+          fi
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v7
+        if: steps.package.outputs.file != ''
+        with:
+          name: ${{ matrix.target == 'net10.0-android' && 'Sprout-android-apk' || 'Sprout-ios-simulator' }}
+          path: ${{ steps.package.outputs.file }}
+          if-no-files-found: error
+          retention-days: 14
 
   # Always runs: records what the night cost, and files one issue if anything failed.
   report:
